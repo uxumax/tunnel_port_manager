@@ -1,0 +1,13 @@
+[Unit]
+Description=Open and Close Your BackTunnels Ports Daemon
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/path/to/tunnel_port_manager.sh
+Restart=on-failure
+RestartSec=10
+Environment="PATH=/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+
+[Install]
+WantedBy=multi-user.target
