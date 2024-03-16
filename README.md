@@ -19,7 +19,7 @@ The Tunnel Port Manager addresses this issue by allowing ports to be dynamically
 - Utilize `iptables` for port management and `cron` for scheduling port closure tasks.
 - Easy to deploy and manage as a `systemd` service for reliability and convenience.
 
-## Usage
+## Start Daemon on Server with Public IP
 
 1. Clone the repository to your server with a public IP address.
 2. Ensure the script `tunnel_port_manager.sh` is executable: `chmod +x tunnel_port_manager.sh`.
@@ -28,6 +28,82 @@ The Tunnel Port Manager addresses this issue by allowing ports to be dynamically
 5. Reload `systemd` configurations: `sudo systemctl daemon-reload`.
 6. Start the service: `sudo systemctl start tunnel_port_manager`.
 7. Enable the service to start on boot: `sudo systemctl enable tunnel_port_manager`.
+
+## SSH Connection Setup with Dynamic Port Opening
+
+To facilitate a secure and dynamic SSH connection that requires opening a port on the fly on your server with a public IP, you can integrate the Tunnel Port Manager with your SSH setup. This approach allows you to open ports dynamically before initiating an SSH connection to your target server behind the public IP server.
+
+Follow these steps to configure your SSH client to open a port dynamically before connecting:
+
+1. **Local Script Creation**: Create a local script, `open_port_and_ssh.sh`, that sends a command to open a port on the public IP server before establishing an SSH connection to your target server.
+
+    Here's an example of what the script could look like:
+
+    ```bash
+    #!/bin/bash
+
+    # The port you want to open on the public IP server
+    PORT=your_port_here
+
+    # Command to open the port
+    echo $PORT > /path/to/ports_to_open.fifo
+
+    # Wait a bit to ensure the port is open
+    sleep 2
+
+    # Proceed with your SSH connection command here
+    # You have time for connecting until port will be closed
+    # After port close you session won't be interrupt
+    
+    # Example: ssh user@target-server
+    ```
+
+    Replace `your_port_here` with the actual port number you wish to open and `/path/to/ports_to_open.fifo` with the actual path to your FIFO file used by the Tunnel Port Manager. Adjust the `ssh` command at the end of the script to match your connection details.
+
+2. **Making the Script Executable**: Change the script's permissions to make it executable.
+
+    ```bash
+    chmod +x open_port_and_ssh.sh
+    ```
+
+3. **SSH Configuration**: You can now use this script manually whenever you need to establish an SSH connection that requires opening a port dynamically. If you are frequently connecting to the same server, consider adding an alias in your shell configuration file (e.g., `.bashrc` or `.zshrc`) to simplify the process.
+
+    ```bash
+    alias ssh_with_port_open='/path/to/open_port_and_ssh.sh'
+    ```
+
+This setup allows you to dynamically open ports on your public IP server immediately before initiating an SSH connection, enhancing security by ensuring that ports are not left open unnecessarily.
+
+## Integrating Port Opening into SSH Configuration
+
+For a seamless experience that automates the port opening process when initiating an SSH connection, you can incorporate the Tunnel Port Manager directly into your SSH configuration. This method utilizes `ProxyCommand` to execute a command that opens the necessary port right before the SSH connection is established.
+
+To configure this, you'll need to add a specific host entry in your `~/.ssh/config` file. Here's how you can set it up:
+
+1. **SSH Config Modification**: Edit your `~/.ssh/config` file and add a new host entry for your target server that requires dynamic port opening. Replace `<YourTargetServer>`, `<User>`, and `<YourPortHere>` with your actual server details and port number.
+
+    ```ssh
+    Host <YourTargetServer>
+        HostName <YourTargetServerIPAddress>
+        User <User>
+        ProxyCommand sh -c 'echo <YourPortHere> > /path/to/ports_to_open.fifo; sleep 2; nc %h %p'
+    ```
+
+    In this configuration:
+    - `HostName` should be replaced with the IP address or hostname of your target server.
+    - `<YourPortHere>` is the port you want to dynamically open.
+    - `/path/to/ports_to_open.fifo` is the path to the FIFO file used by the Tunnel Port Manager.
+    - `nc %h %p` uses `netcat` to establish the actual SSH connection after the port is opened. `%h` and `%p` are placeholders that `ssh` replaces with the host and port specified in the SSH command.
+
+2. **Usage**: Now, when you SSH to your target server using the alias defined in the SSH config, the specified port will be automatically opened just before the connection is established. This setup minimizes manual steps and streamlines the connection process.
+
+    Simply use the SSH command as usual:
+
+    ```bash
+    ssh <YourTargetServer>
+    ```
+
+This approach ensures that your dynamic port opening process is neatly integrated into your SSH workflow, offering a more automated and hassle-free experience.
 
 ## System Requirements
 
