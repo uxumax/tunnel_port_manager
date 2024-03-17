@@ -111,7 +111,7 @@ To configure this, you'll need to add a specific host entry in your ~/.ssh/confi
     Simply use the SSH command as usual:
 
     ```bash
-    ssh <YourTargetServer>
+    ssh vm_over_nat
     ```
 
 This approach ensures that your dynamic port opening process is neatly integrated into your SSH workflow, offering a more automated and hassle-free experience.
