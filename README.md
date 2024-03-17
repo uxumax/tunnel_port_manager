@@ -76,24 +76,35 @@ This setup allows you to dynamically open ports on your public IP server immedia
 
 ## Integrating Port Opening into SSH Configuration
 
-For a seamless experience that automates the port opening process when initiating an SSH connection, you can incorporate the Tunnel Port Manager directly into your SSH configuration. This method utilizes `ProxyCommand` to execute a command that opens the necessary port right before the SSH connection is established.
+For a seamless experience that automates the port opening process when initiating an SSH connection, you can incorporate the Tunnel Port Manager directly into your SSH configuration. This method utilizes ProxyCommand to execute a command that opens the necessary port right before the SSH connection is established.
 
-To configure this, you'll need to add a specific host entry in your `~/.ssh/config` file. Here's how you can set it up:
+To configure this, you'll need to add a specific host entry in your ~/.ssh/config file. Here's how you can set it up:
 
-1. **SSH Config Modification**: Edit your `~/.ssh/config` file and add a new host entry for your target server that requires dynamic port opening. Replace `<YourTargetServer>`, `<User>`, and `<YourPortHere>` with your actual server details and port number.
+1. **SSH Config Modification**: Edit your ~/.ssh/config file and add new host entries for your target server and any virtual machines (VMs) that require dynamic port opening through a reverse tunnel. Replace the placeholders with your actual server details and port numbers.
 
     ```ssh
-    Host <YourTargetServer>
-        HostName <YourTargetServerIPAddress>
-        User <User>
-        ProxyCommand sh -c 'echo <YourPortHere> > /path/to/ports_to_open.fifo; sleep 2; nc %h %p'
+    Host vps_with_public_ip
+    Hostname 77.77.77.77
+    User user
+    
+    Host vm_over_nat
+    Hostname 77.77.77.77
+    User user
+    # Port of the tunnel from VM over NAT
+    Port 2201
+    # Open port command using ProxyCommand
+    ProxyCommand ssh vps_with_public_ip "echo %p > ~/.ports_to_open.fifo;exec nc %h %p"
     ```
 
     In this configuration:
-    - `HostName` should be replaced with the IP address or hostname of your target server.
-    - `<YourPortHere>` is the port you want to dynamically open.
-    - `/path/to/ports_to_open.fifo` is the path to the FIFO file used by the Tunnel Port Manager.
-    - `nc %h %p` uses `netcat` to establish the actual SSH connection after the port is opened. `%h` and `%p` are placeholders that `ssh` replaces with the host and port specified in the SSH command.
+    - `Hostname` should be replaced with the IP address of your server that has a public IP address.
+    - `User` is the username for SSH login on the target server or VM.
+    - `Port 2201` specifies the port on which the reverse tunnel is listening. This needs to be replaced with the actual port number used by your setup.
+    - The `ProxyCommand` is used to open the necessary port on the server before initiating the SSH connection. The command:
+      - `ssh bitvps` initiates an SSH connection to the intermediary server (in this example, `bitvps`). Replace `bitvps` with your server's hostname or alias.
+      - `"echo %p > ~/.ports_to_open.fifo;exec nc %h %p"`: This command does two things:
+        1. `echo %p > ~/.ports_to_open.fifo` writes the port number (`%p`, dynamically replaced by SSH with the port specified in the SSH command) to a FIFO file. This action triggers the Tunnel Port Manager on the server to open the specified port.
+        2. `exec nc %h %p` uses `netcat` (`nc`) to establish the actual SSH connection to the host (`%h`) and port (`%p`) after the port has been opened. `%h` and `%p` are placeholders that `ssh` replaces with the host and port specified in the SSH command. This ensures the port is open just before the connection, facilitating the seamless use of reverse tunnels.
 
 2. **Usage**: Now, when you SSH to your target server using the alias defined in the SSH config, the specified port will be automatically opened just before the connection is established. This setup minimizes manual steps and streamlines the connection process.
 
