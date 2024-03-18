@@ -93,7 +93,7 @@ To configure this, you'll need to add a specific host entry in your ~/.ssh/confi
     # Port of the tunnel from VM over NAT
     Port 2201
     # Open port command using ProxyCommand
-    ProxyCommand ssh vps_with_public_ip "echo %p > ~/.ports_to_open.fifo;exec nc %h %p"
+    ProxyCommand ssh vps_with_public_ip "echo %p > /path/to/ports_to_open.fifo;exec nc %h %p"
     ```
 
     In this configuration:
